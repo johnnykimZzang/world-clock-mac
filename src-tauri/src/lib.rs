@@ -1,5 +1,6 @@
 use tauri::{
-    tray::TrayIconBuilder, Manager, WebviewUrl, WebviewWindowBuilder,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder},
+    Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder,
 };
 
 #[tauri::command]
@@ -9,24 +10,45 @@ fn update_tray_title(app: tauri::AppHandle, title: String) {
     }
 }
 
-fn toggle_popover(app: &tauri::AppHandle) {
+fn show_popover(app: &tauri::AppHandle, click_pos: &PhysicalPosition<f64>) {
+    let win_width = 360.0_f64;
+    let win_height = 780.0_f64;
+
+    // Position window centered horizontally on click, just below menu bar
+    let x = click_pos.x - (win_width / 2.0);
+    let y = click_pos.y + 8.0;
+
     if let Some(window) = app.get_webview_window("popover") {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
         } else {
+            let _ = window.set_position(PhysicalPosition::new(x as i32, y as i32));
             let _ = window.show();
             let _ = window.set_focus();
         }
     } else {
-        let _ = WebviewWindowBuilder::new(app, "popover", WebviewUrl::default())
+        let window = WebviewWindowBuilder::new(app, "popover", WebviewUrl::default())
             .title("World Clock")
-            .inner_size(360.0, 640.0)
+            .inner_size(win_width, win_height)
+            .position(x, y)
             .resizable(false)
             .decorations(false)
             .always_on_top(true)
             .visible(true)
             .focused(true)
             .build();
+
+        // Auto-hide when popover loses focus
+        if let Ok(win) = window {
+            let app_handle = app.clone();
+            win.on_window_event(move |event| {
+                if let tauri::WindowEvent::Focused(false) = event {
+                    if let Some(w) = app_handle.get_webview_window("popover") {
+                        let _ = w.hide();
+                    }
+                }
+            });
+        }
     }
 }
 
@@ -34,15 +56,22 @@ fn toggle_popover(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(move |app| {
             let handle = app.handle().clone();
+
             let tray = TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
                 .tooltip("World Clock")
                 .on_tray_icon_event(move |_tray, event| {
-                    if let tauri::tray::TrayIconEvent::Click { .. } = event {
-                        toggle_popover(&handle);
+                    if let tauri::tray::TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        position,
+                        ..
+                    } = event
+                    {
+                        show_popover(&handle, &position);
                     }
                 })
                 .build(app)?;

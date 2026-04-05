@@ -28,7 +28,7 @@ export default function App() {
       fontFamily: "'Instrument Serif', Georgia, serif",
       overflow: "hidden",
       position: "relative",
-      borderRadius: "12px",
+      borderRadius: "0px",
     }}>
       {showSettings && (
         <Settings
@@ -48,12 +48,12 @@ export default function App() {
         overflow: "hidden",
       }}>
         {/* Header */}
-        <div style={{ padding: "20px 20px 0", flexShrink: 0 }}>
+        <div style={{ padding: "14px 16px 0", flexShrink: 0 }}>
           <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            marginBottom: "12px",
+            marginBottom: "8px",
           }}>
             <div>
               <div style={{
@@ -67,7 +67,7 @@ export default function App() {
                 World Clock · {cities.length} Cities
               </div>
               <h1 style={{
-                fontSize: "28px",
+                fontSize: "24px",
                 fontWeight: 400,
                 margin: 0,
                 letterSpacing: "-0.03em",
@@ -97,7 +97,7 @@ export default function App() {
         </div>
 
         {/* Slider */}
-        <div style={{ padding: "0 20px", flexShrink: 0 }}>
+        <div style={{ padding: "0 16px", flexShrink: 0 }}>
           <TimeSlider
             baseCity={baseCity}
             effectiveDate={effectiveDate}
@@ -111,10 +111,10 @@ export default function App() {
         <div style={{
           flex: 1,
           overflow: "auto",
-          padding: "0 20px 20px",
+          padding: "0 16px 12px",
           display: "flex",
           flexDirection: "column",
-          gap: "10px",
+          gap: "8px",
         }}>
           {cities.map((city, idx) => (
             <CityCard

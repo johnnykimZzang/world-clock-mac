@@ -79,15 +79,15 @@ export function TimeSlider({ baseCity, effectiveDate, onSliderChange, onReset }:
   return (
     <div style={{
       background: "rgba(255,255,255,0.04)",
-      borderRadius: "16px",
-      padding: "20px 20px 12px",
-      marginBottom: "12px",
+      borderRadius: "14px",
+      padding: "14px 16px 8px",
+      marginBottom: "8px",
       border: "1px solid rgba(255,255,255,0.06)",
       backdropFilter: "blur(20px)",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "26px", lineHeight: 1 }}>{baseCity.flag}</span>
+          <span style={{ fontSize: "22px", lineHeight: 1 }}>{baseCity.flag}</span>
           <div>
             <div style={{
               fontFamily: "'DM Mono', monospace",
@@ -102,7 +102,7 @@ export function TimeSlider({ baseCity, effectiveDate, onSliderChange, onReset }:
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
               <span style={{
                 fontFamily: "'DM Mono', monospace",
-                fontSize: "28px",
+                fontSize: "24px",
                 fontWeight: 500,
                 letterSpacing: "-0.03em",
                 color: palette.accent,

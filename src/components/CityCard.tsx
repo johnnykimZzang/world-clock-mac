@@ -36,7 +36,7 @@ export function CityCard({ city, effectiveDate, isBase, baseTimezone, onClick }:
       style={{
         background: palette.bg,
         borderRadius: "14px",
-        padding: "18px 20px",
+        padding: "14px 16px",
         color: palette.text,
         position: "relative",
         overflow: "hidden",
@@ -47,7 +47,6 @@ export function CityCard({ city, effectiveDate, isBase, baseTimezone, onClick }:
           ? `0 6px 24px ${palette.glow}, 0 0 0 1px ${palette.accent}44, inset 0 1px 0 rgba(255,255,255,0.1)`
           : `0 4px 16px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,0.1)`,
         cursor: "pointer",
-        minHeight: "100px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -57,10 +56,10 @@ export function CityCard({ city, effectiveDate, isBase, baseTimezone, onClick }:
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 1 }}>
         <div>
-          <div style={{ fontSize: "24px", marginBottom: "2px", lineHeight: 1 }}>{city.flag}</div>
+          <div style={{ fontSize: "20px", marginBottom: "1px", lineHeight: 1 }}>{city.flag}</div>
           <div style={{
             fontFamily: "'Instrument Serif', Georgia, serif",
-            fontSize: "17px",
+            fontSize: "15px",
             fontWeight: 400,
             letterSpacing: "-0.02em",
             display: "flex",
@@ -97,11 +96,11 @@ export function CityCard({ city, effectiveDate, isBase, baseTimezone, onClick }:
         </div>
       </div>
 
-      <div style={{ position: "relative", zIndex: 1, marginTop: "8px" }}>
+      <div style={{ position: "relative", zIndex: 1, marginTop: "4px" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
           <span style={{
             fontFamily: "'DM Mono', monospace",
-            fontSize: "36px",
+            fontSize: "28px",
             fontWeight: 500,
             letterSpacing: "-0.03em",
             lineHeight: 1,
