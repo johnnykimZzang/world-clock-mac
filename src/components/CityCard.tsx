@@ -3,6 +3,7 @@ import type { City } from "../lib/cities";
 import {
   getTimeInTimezone,
   formatTime12,
+  formatTime24,
   getDayState,
   getDayEmoji,
   getDayLabel,
@@ -16,13 +17,15 @@ interface CityCardProps {
   effectiveDate: Date;
   isBase: boolean;
   baseTimezone: string;
+  use24Hour: boolean;
   onClick: () => void;
 }
 
-export function CityCard({ city, effectiveDate, isBase, baseTimezone, onClick }: CityCardProps) {
+export function CityCard({ city, effectiveDate, isBase, baseTimezone, use24Hour, onClick }: CityCardProps) {
   const [hovered, setHovered] = useState(false);
   const { hour, minute } = getTimeInTimezone(city.timezone, effectiveDate);
-  const { display, period } = formatTime12(hour, minute);
+  const time24 = formatTime24(hour, minute);
+  const { display: time12, period } = formatTime12(hour, minute);
   const state = getDayState(hour);
   const palette = PALETTES[state];
   const diff = getHourOffset(baseTimezone, city.timezone, effectiveDate);
@@ -105,16 +108,18 @@ export function CityCard({ city, effectiveDate, isBase, baseTimezone, onClick }:
             letterSpacing: "-0.03em",
             lineHeight: 1,
           }}>
-            {display}
+            {use24Hour ? time24 : time12}
           </span>
-          <span style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: "12px",
-            opacity: 0.6,
-            fontWeight: 400,
-          }}>
-            {period}
-          </span>
+          {!use24Hour && (
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: "12px",
+              opacity: 0.6,
+              fontWeight: 400,
+            }}>
+              {period}
+            </span>
+          )}
         </div>
         <div style={{
           fontSize: "11px",

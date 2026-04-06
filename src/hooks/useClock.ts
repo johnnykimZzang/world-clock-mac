@@ -2,13 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { City } from "../lib/cities";
 import { DEFAULT_CITIES } from "../lib/cities";
-import {
-  getTimeInTimezone,
-  formatTime24,
-  getDayState,
-  getDayEmoji,
-  dateWithOffset,
-} from "../lib/time";
+import { dateWithOffset } from "../lib/time";
 
 export function useClock() {
   const [cities, setCities] = useState<City[]>(() => {
@@ -19,8 +13,13 @@ export function useClock() {
     const saved = localStorage.getItem("world-clock-base");
     return saved ? parseInt(saved) : 0;
   });
-  const [sliderOffset, setSliderOffset] = useState(0); // minutes from now
-  const [now, setNow] = useState(new Date());
+  const [use24Hour, setUse24Hour] = useState(() => {
+    const saved = localStorage.getItem("world-clock-24h");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [sliderOffset, setSliderOffset] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_tick, setTick] = useState(0);
 
   // Save preferences
   useEffect(() => {
@@ -31,28 +30,31 @@ export function useClock() {
     localStorage.setItem("world-clock-base", String(baseIndex));
   }, [baseIndex]);
 
-  // Live timer — update every 30s
+  useEffect(() => {
+    localStorage.setItem("world-clock-24h", String(use24Hour));
+  }, [use24Hour]);
+
+  // Live timer — update every 1s for UI (only runs when popover is visible)
   useEffect(() => {
     const interval = setInterval(() => {
-      setNow(new Date());
-    }, 30000);
+      setTick((t) => t + 1);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Update tray title
+  // Sync tray config to Rust backend
   useEffect(() => {
-    const effectiveDate = dateWithOffset(sliderOffset);
     const base = cities[baseIndex];
     if (!base) return;
-    const { hour, minute } = getTimeInTimezone(base.timezone, effectiveDate);
-    const state = getDayState(hour);
-    const title = `${base.flag} ${formatTime24(hour, minute)} ${getDayEmoji(state)}`;
-    invoke("update_tray_title", { title }).catch(() => {});
-  }, [now, sliderOffset, baseIndex, cities]);
+    invoke("update_tray_config", {
+      timezone: base.timezone,
+      flag: base.flag,
+      use24h: use24Hour,
+    }).catch(() => {});
+  }, [baseIndex, cities, use24Hour]);
 
   const resetToNow = useCallback(() => {
     setSliderOffset(0);
-    setNow(new Date());
   }, []);
 
   const setBase = useCallback((index: number) => {
@@ -69,7 +71,7 @@ export function useClock() {
   const removeCity = useCallback((timezone: string) => {
     setCities((prev) => {
       const next = prev.filter((c) => c.timezone !== timezone);
-      return next.length > 0 ? next : prev; // prevent empty
+      return next.length > 0 ? next : prev;
     });
     setBaseIndex((prev) => {
       const newCities = cities.filter((c) => c.timezone !== timezone);
@@ -84,6 +86,8 @@ export function useClock() {
     baseIndex,
     sliderOffset,
     effectiveDate,
+    use24Hour,
+    setUse24Hour,
     setSliderOffset,
     setBase,
     resetToNow,

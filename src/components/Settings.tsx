@@ -5,13 +5,15 @@ import { ALL_CITIES } from "../lib/cities";
 interface SettingsProps {
   cities: City[];
   baseIndex: number;
+  use24Hour: boolean;
+  onToggle24Hour: () => void;
   onAddCity: (city: City) => void;
   onRemoveCity: (timezone: string) => void;
   onSetBase: (index: number) => void;
   onClose: () => void;
 }
 
-export function Settings({ cities, baseIndex, onAddCity, onRemoveCity, onSetBase, onClose }: SettingsProps) {
+export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCity, onRemoveCity, onSetBase, onClose }: SettingsProps) {
   const [search, setSearch] = useState("");
 
   const availableCities = ALL_CITIES.filter(
@@ -65,6 +67,50 @@ export function Settings({ cities, baseIndex, onAddCity, onRemoveCity, onSetBase
       </div>
 
       <div style={{ flex: 1, overflow: "auto", padding: "16px 20px" }}>
+        {/* Time Format Toggle */}
+        <div style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: "9px",
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          opacity: 0.4,
+          marginBottom: "10px",
+        }}>
+          시간 표시
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 12px",
+            borderRadius: "10px",
+            marginBottom: "16px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <span style={{ fontSize: "13px", fontFamily: "'DM Mono', monospace" }}>
+            {use24Hour ? "24시간 (14:30)" : "12시간 (2:30 PM)"}
+          </span>
+          <button
+            onClick={onToggle24Hour}
+            style={{
+              background: use24Hour ? "rgba(108,99,255,0.25)" : "rgba(255,255,255,0.08)",
+              border: use24Hour ? "1px solid rgba(108,99,255,0.4)" : "1px solid rgba(255,255,255,0.12)",
+              color: use24Hour ? "#a5a0ff" : "rgba(255,255,255,0.5)",
+              padding: "4px 10px",
+              borderRadius: "100px",
+              fontFamily: "'DM Mono', monospace",
+              fontSize: "10px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {use24Hour ? "24H" : "12H"}
+          </button>
+        </div>
+
         {/* Current Cities */}
         <div style={{
           fontFamily: "'DM Mono', monospace",

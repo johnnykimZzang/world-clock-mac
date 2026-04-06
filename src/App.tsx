@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useClock } from "./hooks/useClock";
+import { useUpdater } from "./hooks/useUpdater";
 import { CityCard } from "./components/CityCard";
 import { TimeSlider } from "./components/TimeSlider";
 import { Settings } from "./components/Settings";
@@ -10,6 +11,8 @@ export default function App() {
     baseIndex,
     sliderOffset,
     effectiveDate,
+    use24Hour,
+    setUse24Hour,
     setSliderOffset,
     setBase,
     resetToNow,
@@ -17,6 +20,7 @@ export default function App() {
     removeCity,
   } = useClock();
 
+  const { update, installing, installUpdate } = useUpdater();
   const [showSettings, setShowSettings] = useState(false);
   const baseCity = cities[baseIndex] ?? cities[0];
 
@@ -34,6 +38,8 @@ export default function App() {
         <Settings
           cities={cities}
           baseIndex={baseIndex}
+          use24Hour={use24Hour}
+          onToggle24Hour={() => setUse24Hour((prev: boolean) => !prev)}
           onAddCity={addCity}
           onRemoveCity={removeCity}
           onSetBase={setBase}
@@ -96,6 +102,47 @@ export default function App() {
           </div>
         </div>
 
+        {/* Update Banner */}
+        {update && (
+          <div style={{
+            margin: "0 16px",
+            padding: "8px 12px",
+            borderRadius: "10px",
+            background: "rgba(108,99,255,0.12)",
+            border: "1px solid rgba(108,99,255,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
+          }}>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: "11px",
+              color: "#a5a0ff",
+            }}>
+              v{update.version} 업데이트 가능
+            </span>
+            <button
+              onClick={installUpdate}
+              disabled={installing}
+              style={{
+                background: "rgba(108,99,255,0.25)",
+                border: "1px solid rgba(108,99,255,0.4)",
+                color: "#a5a0ff",
+                padding: "3px 10px",
+                borderRadius: "100px",
+                fontFamily: "'DM Mono', monospace",
+                fontSize: "10px",
+                cursor: installing ? "default" : "pointer",
+                fontWeight: 600,
+                opacity: installing ? 0.5 : 1,
+              }}
+            >
+              {installing ? "설치 중..." : "업데이트"}
+            </button>
+          </div>
+        )}
+
         {/* Slider */}
         <div style={{ padding: "0 16px", flexShrink: 0 }}>
           <TimeSlider
@@ -123,6 +170,7 @@ export default function App() {
               effectiveDate={effectiveDate}
               isBase={idx === baseIndex}
               baseTimezone={baseCity.timezone}
+              use24Hour={use24Hour}
               onClick={() => setBase(idx)}
             />
           ))}
