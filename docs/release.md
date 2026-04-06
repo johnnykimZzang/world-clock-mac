@@ -5,39 +5,40 @@
 ## 릴리스 플로우
 
 ```
-코드 변경 → 버전 업데이트 → 태그 푸시 → GitHub Actions 빌드 → Release 생성 → 앱 자동 업데이트
+git push origin main → 자동 버전 bump → 자동 태그 → 빌드 → Release 생성 → 앱 자동 업데이트
 ```
 
-### 단계별 가이드
+### 사용법
 
-#### 1. 버전 업데이트
-
-`src-tauri/tauri.conf.json`의 `version` 필드 변경:
-
-```json
-{
-  "version": "0.2.0"
-}
-```
-
-#### 2. 커밋 + 태그 + 푸시
+그냥 `main`에 푸시하면 끝이다:
 
 ```bash
 git add -A
-git commit -m "v0.2.0: 변경 내용 요약"
-git tag v0.2.0
-git push origin main --tags
+git commit -m "feat: 새 기능 추가"
+git push origin main
 ```
 
-#### 3. 자동 빌드 (GitHub Actions)
+**수동으로 버전을 올리거나 태그를 만들 필요 없다.** GitHub Actions가 자동으로 처리한다.
 
-태그 푸시 시 `.github/workflows/release.yml`이 자동 실행:
-- macOS aarch64 (Apple Silicon) 빌드
-- macOS x86_64 (Intel) 빌드
-- GitHub Release 생성
-- 업데이트 아티팩트 업로드: `.app.tar.gz`, `.sig`, `latest.json`
+### 자동 버전 규칙 (Conventional Commits 기반)
 
-#### 4. 앱 자동 업데이트
+| 커밋 메시지 패턴 | 버전 변경 | 예시 |
+|-----------------|----------|------|
+| `feat:` | minor (0.x.0) | `feat: 도시 검색 추가` |
+| `feat!:` 또는 `BREAKING CHANGE` | major (x.0.0) | `feat!: 설정 구조 변경` |
+| 그 외 (`fix:`, `chore:`, etc.) | patch (0.0.x) | `fix: 시간 표시 오류 수정` |
+
+### 자동 처리 과정
+
+1. `main` 푸시 감지
+2. 마지막 태그 이후 코드 변경 확인 (docs만 변경 시 스킵)
+3. 커밋 메시지 분석 → 버전 자동 결정
+4. `tauri.conf.json` 버전 업데이트 + 커밋 + 태그 생성
+5. macOS aarch64 + x86_64 빌드
+6. 커밋 메시지 기반 릴리스 노트 자동 생성
+7. GitHub Release 생성 + 아티팩트 업로드
+
+### 앱 자동 업데이트
 
 사용자 앱이 시작 시:
 1. `latest.json` 확인 (GitHub Releases에서)

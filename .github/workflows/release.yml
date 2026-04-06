@@ -2,11 +2,115 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
 jobs:
-  release:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      tag_name: ${{ steps.bump.outputs.tag_name }}
+      release_notes: ${{ steps.notes.outputs.notes }}
+      should_release: ${{ steps.bump.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Latest tag: $TAG"
+
+      - name: Check for code changes since last tag
+        id: changes
+        run: |
+          LAST_TAG="${{ steps.latest_tag.outputs.tag }}"
+          # Check if there are meaningful code changes (exclude docs-only, etc.)
+          CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- \
+            'src/**' 'src-tauri/**' 'package.json' 'pnpm-lock.yaml' | head -1)
+          if [ -z "$CHANGED" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No code changes since $LAST_TAG, skipping release"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Code changes found since $LAST_TAG"
+          fi
+
+      - name: Determine version bump
+        id: bump
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          LAST_TAG: ${{ steps.latest_tag.outputs.tag }}
+        run: |
+          CURRENT="${LAST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          # Check commit messages for bump type
+          COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s")
+
+          if echo "$COMMITS" | grep -qiE "^breaking|^feat!|BREAKING CHANGE"; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+            echo "Bump: major"
+          elif echo "$COMMITS" | grep -qiE "^feat"; then
+            MINOR=$((MINOR + 1)); PATCH=0
+            echo "Bump: minor"
+          else
+            PATCH=$((PATCH + 1))
+            echo "Bump: patch"
+          fi
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+          echo "New version: $NEW_VERSION"
+
+      - name: Generate release notes
+        id: notes
+        if: steps.bump.outputs.should_release == 'true'
+        env:
+          LAST_TAG: ${{ steps.latest_tag.outputs.tag }}
+        run: |
+          {
+            echo 'notes<<NOTES_EOF'
+            echo "## Changes"
+            echo ""
+            git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges
+            echo ""
+            echo ""
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$LAST_TAG...v${{ steps.bump.outputs.new_version }}"
+            echo 'NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update version in tauri.conf.json
+        if: steps.bump.outputs.should_release == 'true'
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+        run: |
+          sed -i "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" src-tauri/tauri.conf.json
+          cat src-tauri/tauri.conf.json | grep version
+
+      - name: Commit version bump and create tag
+        if: steps.bump.outputs.should_release == 'true'
+        env:
+          TAG_NAME: ${{ steps.bump.outputs.tag_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src-tauri/tauri.conf.json
+          git commit -m "chore: bump version to $TAG_NAME [skip ci]"
+          git tag "$TAG_NAME"
+          git push origin main --tags
+
+  build:
+    needs: version
+    if: needs.version.outputs.should_release == 'true'
     permissions:
       contents: write
     strategy:
@@ -21,6 +125,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag_name }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -47,9 +153,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "World Clock ${{ github.ref_name }}"
-          releaseBody: "Auto release"
+          tagName: ${{ needs.version.outputs.tag_name }}
+          releaseName: "World Clock ${{ needs.version.outputs.tag_name }}"
+          releaseBody: ${{ needs.version.outputs.release_notes }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
