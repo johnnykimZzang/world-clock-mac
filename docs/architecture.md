@@ -15,7 +15,7 @@ World Clock은 macOS 메뉴바에 상주하는 세계 시계 앱이다. Tauri v2
 | 번들러 | Vite 7 | 프론트엔드 빌드 |
 | 패키지 매니저 | pnpm | 의존성 관리 |
 | 자동 업데이트 | tauri-plugin-updater | GitHub Releases 기반 OTA 업데이트 |
-| CI/CD | GitHub Actions | 태그 푸시 시 자동 빌드 + 릴리스 |
+| CI/CD | GitHub Actions | main 푸시 시 자동 버전 bump + 빌드 + 릴리스 |
 
 ## 디렉토리 구조
 
