@@ -30,4 +30,5 @@ export const ALL_CITIES: City[] = [
   { name: "Istanbul", flag: "🇹🇷", timezone: "Europe/Istanbul", label: "TRT" },
   { name: "Honolulu", flag: "🇺🇸", timezone: "Pacific/Honolulu", label: "HST" },
   { name: "Anchorage", flag: "🇺🇸", timezone: "America/Anchorage", label: "AKT" },
+  { name: "Athens", flag: "🇬🇷", timezone: "Europe/Athens", label: "EET" },
 ];
