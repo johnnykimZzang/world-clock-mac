@@ -1,6 +1,6 @@
 # Architecture
 
-최종 업데이트: 2026-04-06
+최종 업데이트: 2026-04-16
 
 ## 개요
 
@@ -26,7 +26,7 @@ world-clock-mac/
 │   ├── main.tsx                  # React 진입점
 │   ├── hooks/
 │   │   ├── useClock.ts           # 시계 상태 관리 (도시, 시간포맷, tray config 동기화)
-│   │   └── useUpdater.ts         # 자동 업데이트 체크
+│   │   └── useUpdater.ts         # 자동 업데이트 체크 + 수동 체크(menu:check-updates 이벤트)
 │   ├── components/
 │   │   ├── CityCard.tsx          # 개별 도시 시간 카드
 │   │   ├── TimeSlider.tsx        # 시간 슬라이더 (가상 시간 이동)
@@ -49,7 +49,25 @@ world-clock-mac/
 
 ## 핵심 아키텍처 결정
 
-### 1. Tray Title 갱신은 Rust가 담당
+### 1. 트레이 컨텍스트 메뉴 (우클릭)
+
+우클릭 시 네이티브 메뉴 표시. `tauri::menu::Menu` + `app.on_menu_event()`로 구현.
+
+| 항목 | 동작 |
+|------|------|
+| World Clock vX.X.X | 비활성 표시 (정보용) |
+| 업데이트 확인 | popover를 show + `menu:check-updates` 이벤트 emit → 프론트에서 `check()` 호출 |
+| 종료 | `app_handle.exit(0)` |
+
+좌클릭은 팝오버 토글 (`.show_menu_on_left_click(false)` 설정).  
+이벤트 브리지: Rust `app.emit("menu:check-updates", ())` → React `listen("menu:check-updates", ...)`.
+
+**capabilities 권한 (`src-tauri/capabilities/default.json`)**:
+- `updater:default`: `check()` 호출 허용
+- `process:allow-restart`: `relaunch()` 호출 허용
+- `windows`: `["main", "popover"]` — popover webview가 emit 이벤트를 수신할 수 있도록
+
+### 2. Tray Title 갱신은 Rust가 담당
 
 메뉴바 시간 표시의 책임은 Rust 백엔드에 있다. 프론트엔드(React webview)는 팝오버가 닫히면 비활성화되므로, `setInterval`로 tray를 갱신하면 멈추는 문제가 있었다.
 

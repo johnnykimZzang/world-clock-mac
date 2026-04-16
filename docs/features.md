@@ -1,6 +1,6 @@
 # Features
 
-최종 업데이트: 2026-04-06
+최종 업데이트: 2026-04-16
 
 ## 메뉴바 시계
 
@@ -30,8 +30,16 @@
 
 ## 자동 업데이트
 - 앱 시작 시 GitHub Releases에서 최신 버전 확인
-- 업데이트 가능 시 팝오버 상단에 배너 표시
+- 업데이트 가능 시 팝오버 상단에 배너 표시 (보라색)
 - 클릭 한 번으로 다운로드 + 설치 + 재시작
+
+## 트레이 컨텍스트 메뉴 (우클릭)
+- 현재 버전 표시 (비활성 항목, 정보 표시용)
+- 업데이트 확인: 수동으로 최신 버전 체크. 최신이면 팝오버에 "최신 버전입니다" 토스트 3초 표시
+- 종료
+
+## 설정 화면 하단
+- 현재 앱 버전 표시 (`World Clock vX.X.X`)
 
 ## 지원 도시
 
@@ -56,5 +64,6 @@
 | Istanbul | Europe/Istanbul | |
 | Honolulu | Pacific/Honolulu | |
 | Anchorage | America/Anchorage | |
+| Athens | Europe/Athens | |
 
 DST(서머타임)는 `Intl.DateTimeFormat` (프론트) + `chrono-tz` (백엔드)를 통해 자동 반영됨.

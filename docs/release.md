@@ -1,6 +1,6 @@
 # Release & Auto-Update
 
-최종 업데이트: 2026-04-06
+최종 업데이트: 2026-04-16
 
 ## 릴리스 플로우
 
@@ -99,11 +99,25 @@ https://github.com/johnnykimZzang/world-clock-mac/releases/latest/download/lates
 
 ## 트러블슈팅
 
+### Gatekeeper 차단 ("World Clock Not Opened")
+
+Apple Developer 인증서 없이 배포한 빌드는 macOS Gatekeeper가 차단한다.
+
+**우회 방법 (1회):**
+```bash
+xattr -cr "/Applications/World Clock.app"
+```
+또는 Finder에서 앱을 우클릭 → "열기" → "열기" 클릭.
+
+근본 해결은 Apple Developer Program 가입 ($99/년) 후 코드사인 설정 필요.
+
 ### 업데이트가 감지되지 않을 때
 
-1. `latest.json`이 Release에 정상 업로드되었는지 확인
-2. `tauri.conf.json`의 `version`이 현재 설치된 버전보다 낮은지 확인
-3. `pubkey`가 빌드에 사용된 private key와 쌍이 맞는지 확인
+1. **설치된 빌드인지 확인**: `pnpm tauri dev` 개발 빌드나 직접 빌드한 앱은 updater가 동작하지 않음. `.dmg`로 설치한 빌드에서만 동작.
+2. `latest.json`이 Release에 정상 업로드되었는지 확인
+3. `tauri.conf.json`의 `version`이 현재 설치된 버전보다 낮은지 확인
+4. `pubkey`가 빌드에 사용된 private key와 쌍이 맞는지 확인
+5. `capabilities/default.json`에 `updater:default` 권한이 있는지 확인 (없으면 `check()` 호출이 조용히 실패)
 
 ### GitHub Actions 빌드 실패 시
 
