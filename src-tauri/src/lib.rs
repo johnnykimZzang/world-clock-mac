@@ -5,8 +5,9 @@ use std::time::Duration;
 use chrono::Utc;
 use chrono_tz::Tz;
 use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder},
-    Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder,
+    Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder,
 };
 
 #[derive(Clone)]
@@ -109,12 +110,25 @@ pub fn run() {
         .manage(tray_config.clone())
         .setup(move |app| {
             let handle = app.handle().clone();
+            let menu_handle = app.handle().clone();
             let config = tray_config.clone();
+
+            // Build tray context menu
+            let app_version = app.package_info().version.to_string();
+            let ver_item = MenuItem::with_id(app, "version",
+                format!("World Clock v{app_version}"), false, None::<&str>)?;
+            let check_item = MenuItem::with_id(app, "check_updates",
+                "업데이트 확인", true, None::<&str>)?;
+            let sep = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[&ver_item, &check_item, &sep, &quit_item])?;
 
             let tray = TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
                 .tooltip("World Clock")
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
                 .on_tray_icon_event(move |_tray, event| {
                     if let tauri::tray::TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -127,6 +141,23 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Menu event handler
+            app.on_menu_event(move |_app, event| {
+                match event.id().as_ref() {
+                    "check_updates" => {
+                        if let Some(win) = menu_handle.get_webview_window("popover") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                        let _ = menu_handle.emit("menu:check-updates", ());
+                    }
+                    "quit" => {
+                        menu_handle.exit(0);
+                    }
+                    _ => {}
+                }
+            });
 
             // Set initial title
             let initial_title = {

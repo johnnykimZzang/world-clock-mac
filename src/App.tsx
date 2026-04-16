@@ -20,7 +20,7 @@ export default function App() {
     removeCity,
   } = useClock();
 
-  const { update, installing, installUpdate } = useUpdater();
+  const { update, installing, installUpdate, upToDate } = useUpdater();
   const [showSettings, setShowSettings] = useState(false);
   const baseCity = cities[baseIndex] ?? cities[0];
 
@@ -140,6 +140,29 @@ export default function App() {
             >
               {installing ? "설치 중..." : "업데이트"}
             </button>
+          </div>
+        )}
+
+        {/* Up-to-date Toast */}
+        {upToDate && (
+          <div style={{
+            margin: "0 16px",
+            padding: "8px 12px",
+            borderRadius: "10px",
+            background: "rgba(34,197,94,0.10)",
+            border: "1px solid rgba(34,197,94,0.25)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: "11px",
+              color: "#86efac",
+            }}>
+              최신 버전입니다
+            </span>
           </div>
         )}
 

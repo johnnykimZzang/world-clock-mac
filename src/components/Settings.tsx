@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import type { City } from "../lib/cities";
 import { ALL_CITIES } from "../lib/cities";
 
@@ -15,6 +16,8 @@ interface SettingsProps {
 
 export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCity, onRemoveCity, onSetBase, onClose }: SettingsProps) {
   const [search, setSearch] = useState("");
+  const [appVersion, setAppVersion] = useState("");
+  useEffect(() => { getVersion().then(setAppVersion).catch(() => {}); }, []);
 
   const availableCities = ALL_CITIES.filter(
     (c) => !cities.some((existing) => existing.timezone === c.timezone)
@@ -265,6 +268,20 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
             }}>+</span>
           </div>
         ))}
+
+        {/* App Version */}
+        <div style={{
+          marginTop: "28px",
+          paddingTop: "16px",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          textAlign: "center",
+          fontFamily: "'DM Mono', monospace",
+          fontSize: "10px",
+          opacity: 0.3,
+          letterSpacing: "0.05em",
+        }}>
+          World Clock {appVersion ? `v${appVersion}` : ""}
+        </div>
       </div>
     </div>
   );
