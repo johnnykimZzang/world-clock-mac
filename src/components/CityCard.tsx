@@ -50,6 +50,8 @@ export function CityCard({ city, effectiveDate, isBase, baseTimezone, use24Hour,
           ? `0 6px 24px ${palette.glow}, 0 0 0 1px ${palette.accent}44, inset 0 1px 0 rgba(255,255,255,0.1)`
           : `0 4px 16px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,0.1)`,
         cursor: "pointer",
+        flexShrink: 0,
+        minHeight: "110px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
