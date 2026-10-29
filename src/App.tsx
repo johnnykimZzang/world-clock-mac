@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useClock } from "./hooks/useClock";
 import { useUpdater } from "./hooks/useUpdater";
-import { CityCard } from "./components/CityCard";
-import { TimeSlider } from "./components/TimeSlider";
+import { useSystemLook } from "./hooks/useSystemLook";
+import { Hero } from "./components/Hero";
+import { CityTile } from "./components/CityTile";
+import { DstNotices } from "./components/DstNotices";
 import { Settings } from "./components/Settings";
+import { snapOffset } from "./lib/time";
 
 export default function App() {
   const {
@@ -20,20 +24,28 @@ export default function App() {
     removeCity,
   } = useClock();
 
+  useSystemLook();
   const { update, installing, installUpdate, upToDate } = useUpdater();
   const [showSettings, setShowSettings] = useState(false);
   const baseCity = cities[baseIndex] ?? cities[0];
 
+  // Esc closes settings first, then the popover itself
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (showSettings) setShowSettings(false);
+      else getCurrentWindow().hide().catch(() => {});
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showSettings]);
+
+  // Dial drags settle on a 5-minute grid, trackpad/wheel steps move 15 minutes
+  const onScrubEnd = useCallback(() => setSliderOffset((o) => snapOffset(o, 5)), [setSliderOffset]);
+  const onWheelStep = useCallback((dir: -1 | 1) => setSliderOffset((o) => snapOffset(o, 15, dir)), [setSliderOffset]);
+
   return (
-    <div style={{
-      height: "100vh",
-      background: "#0c0c14",
-      color: "#e8e8f0",
-      fontFamily: "'Instrument Serif', Georgia, serif",
-      overflow: "hidden",
-      position: "relative",
-      borderRadius: "0px",
-    }}>
+    <div className="popover">
       {showSettings && (
         <Settings
           cities={cities}
@@ -47,170 +59,57 @@ export default function App() {
         />
       )}
 
-      <div style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}>
-        {/* Header */}
-        <div style={{ padding: "14px 16px 0", flexShrink: 0 }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: "8px",
-          }}>
-            <div>
-              <div style={{
-                fontFamily: "'DM Mono', monospace",
-                fontSize: "9px",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-                opacity: 0.4,
-                marginBottom: "6px",
-              }}>
-                World Clock · {cities.length} Cities
-              </div>
-              <h1 style={{
-                fontSize: "24px",
-                fontWeight: 400,
-                margin: 0,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.1,
-                fontStyle: "italic",
-              }}>
-                시차 비교
-              </h1>
-            </div>
-            <button
-              onClick={() => setShowSettings(true)}
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "#e8e8f0",
-                padding: "6px 12px",
-                borderRadius: "100px",
-                fontFamily: "'DM Mono', monospace",
-                fontSize: "11px",
-                cursor: "pointer",
-                marginTop: "4px",
-              }}
-            >
-              ⚙️
-            </button>
-          </div>
+      <header className="head">
+        <div>
+          <div className="meta">World Clock · {cities.length} Cities</div>
+          <h1 className="title">시차 비교</h1>
         </div>
+        <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label="설정">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </header>
 
-        {/* Update Banner */}
-        {update && (
-          <div style={{
-            margin: "0 16px",
-            padding: "8px 12px",
-            borderRadius: "10px",
-            background: "rgba(108,99,255,0.12)",
-            border: "1px solid rgba(108,99,255,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexShrink: 0,
-          }}>
-            <span style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: "11px",
-              color: "#a5a0ff",
-            }}>
-              v{update.version} 업데이트 가능
-            </span>
-            <button
-              onClick={installUpdate}
-              disabled={installing}
-              style={{
-                background: "rgba(108,99,255,0.25)",
-                border: "1px solid rgba(108,99,255,0.4)",
-                color: "#a5a0ff",
-                padding: "3px 10px",
-                borderRadius: "100px",
-                fontFamily: "'DM Mono', monospace",
-                fontSize: "10px",
-                cursor: installing ? "default" : "pointer",
-                fontWeight: 600,
-                opacity: installing ? 0.5 : 1,
-              }}
-            >
-              {installing ? "설치 중..." : "업데이트"}
-            </button>
-          </div>
-        )}
-
-        {/* Up-to-date Toast */}
-        {upToDate && (
-          <div style={{
-            margin: "0 16px",
-            padding: "8px 12px",
-            borderRadius: "10px",
-            background: "rgba(34,197,94,0.10)",
-            border: "1px solid rgba(34,197,94,0.25)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}>
-            <span style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: "11px",
-              color: "#86efac",
-            }}>
-              최신 버전입니다
-            </span>
-          </div>
-        )}
-
-        {/* Slider */}
-        <div style={{ padding: "0 16px", flexShrink: 0 }}>
-          <TimeSlider
-            baseCity={baseCity}
-            effectiveDate={effectiveDate}
-            sliderOffset={sliderOffset}
-            onSliderChange={setSliderOffset}
-            onReset={resetToNow}
-          />
+      {update && (
+        <div className="banner accent">
+          <span>v{update.version} 업데이트 가능</span>
+          <button onClick={installUpdate} disabled={installing}>
+            {installing ? "설치 중..." : "업데이트"}
+          </button>
         </div>
+      )}
+      {upToDate && <div className="banner ok">최신 버전입니다</div>}
 
-        {/* City Cards */}
-        <div style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "0 16px 12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        }}>
-          {cities.map((city, idx) => (
-            <CityCard
+      <DstNotices cities={cities} base={baseCity} />
+
+      <Hero
+        city={baseCity}
+        cities={cities}
+        effectiveDate={effectiveDate}
+        offset={sliderOffset}
+        use24Hour={use24Hour}
+        onOffsetChange={setSliderOffset}
+        onScrubEnd={onScrubEnd}
+        onWheelStep={onWheelStep}
+        onReset={resetToNow}
+      />
+
+      <div className="tiles">
+        {cities.map((city, idx) =>
+          idx === baseIndex ? null : (
+            <CityTile
               key={city.timezone}
               city={city}
+              index={idx}
               effectiveDate={effectiveDate}
-              isBase={idx === baseIndex}
               baseTimezone={baseCity.timezone}
               use24Hour={use24Hour}
               onClick={() => setBase(idx)}
             />
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: "8px 20px 12px",
-          textAlign: "center",
-          fontFamily: "'DM Mono', monospace",
-          fontSize: "10px",
-          opacity: 0.2,
-          letterSpacing: "0.05em",
-          flexShrink: 0,
-        }}>
-          DST 자동 반영 · Intl API 기반
-        </div>
+          ),
+        )}
       </div>
     </div>
   );

@@ -2,11 +2,16 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "popover"],
+  "windows": [
+    "main",
+    "popover"
+  ],
   "permissions": [
     "core:default",
     "opener:default",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:window:allow-hide",
+    "autostart:default"
   ]
 }

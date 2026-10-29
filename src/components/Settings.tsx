@@ -2,6 +2,42 @@ import { useState, useEffect } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import type { City } from "../lib/cities";
 import { ALL_CITIES } from "../lib/cities";
+import { timezoneAbbr } from "../lib/time";
+import { useAutostart } from "../hooks/useAutostart";
+
+function Switch({ on, disabled, onChange }: { on: boolean; disabled?: boolean; onChange: () => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onChange}
+      style={{
+        width: "38px",
+        height: "22px",
+        borderRadius: "100px",
+        border: "none",
+        padding: "2px",
+        background: on ? "var(--accent)" : "var(--edge)",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        transition: "background 0.2s",
+        flexShrink: 0,
+      }}
+    >
+      <span style={{
+        display: "block",
+        width: "18px",
+        height: "18px",
+        borderRadius: "50%",
+        background: "#fff",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+        transform: on ? "translateX(16px)" : "translateX(0)",
+        transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      }} />
+    </button>
+  );
+}
 
 interface SettingsProps {
   cities: City[];
@@ -17,6 +53,7 @@ interface SettingsProps {
 export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCity, onRemoveCity, onSetBase, onClose }: SettingsProps) {
   const [search, setSearch] = useState("");
   const [appVersion, setAppVersion] = useState("");
+  const autostart = useAutostart();
   useEffect(() => { getVersion().then(setAppVersion).catch(() => {}); }, []);
 
   const availableCities = ALL_CITIES.filter(
@@ -29,7 +66,9 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
     <div style={{
       position: "absolute",
       inset: 0,
-      background: "#0c0c14",
+      background: "var(--sheet)",
+      backdropFilter: "blur(24px) saturate(160%)",
+      WebkitBackdropFilter: "blur(24px) saturate(160%)",
       zIndex: 100,
       display: "flex",
       flexDirection: "column",
@@ -38,7 +77,7 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
       {/* Header */}
       <div style={{
         padding: "20px 20px 12px",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        borderBottom: "1px solid var(--sep)",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -55,9 +94,9 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
         <button
           onClick={onClose}
           style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "#e8e8f0",
+            background: "var(--fill-2)",
+            border: "1px solid var(--edge)",
+            color: "var(--fg)",
             padding: "6px 14px",
             borderRadius: "100px",
             fontFamily: "'DM Mono', monospace",
@@ -70,7 +109,7 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
       </div>
 
       <div style={{ flex: 1, overflow: "auto", padding: "16px 20px" }}>
-        {/* Time Format Toggle */}
+        {/* General */}
         <div style={{
           fontFamily: "'DM Mono', monospace",
           fontSize: "9px",
@@ -79,39 +118,49 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
           opacity: 0.4,
           marginBottom: "10px",
         }}>
-          시간 표시
+          일반
         </div>
-        <div
-          style={{
+        <div style={{
+          borderRadius: "10px",
+          marginBottom: "20px",
+          background: "var(--fill-2)",
+          border: "1px solid var(--sep)",
+        }}>
+          <div style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "12px",
             padding: "10px 12px",
-            borderRadius: "10px",
-            marginBottom: "16px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <span style={{ fontSize: "13px", fontFamily: "'DM Mono', monospace" }}>
-            {use24Hour ? "24시간 (14:30)" : "12시간 (2:30 PM)"}
-          </span>
-          <button
-            onClick={onToggle24Hour}
-            style={{
-              background: use24Hour ? "rgba(108,99,255,0.25)" : "rgba(255,255,255,0.08)",
-              border: use24Hour ? "1px solid rgba(108,99,255,0.4)" : "1px solid rgba(255,255,255,0.12)",
-              color: use24Hour ? "#a5a0ff" : "rgba(255,255,255,0.5)",
-              padding: "4px 10px",
-              borderRadius: "100px",
-              fontFamily: "'DM Mono', monospace",
-              fontSize: "10px",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            {use24Hour ? "24H" : "12H"}
-          </button>
+            borderBottom: "1px solid var(--sep)",
+          }}>
+            <div>
+              <div style={{ fontSize: "13px", fontFamily: "'DM Mono', monospace" }}>24시간 표시</div>
+              <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", opacity: 0.45, marginTop: "2px" }}>
+                {use24Hour ? "14:30" : "2:30 PM"}
+              </div>
+            </div>
+            <Switch on={use24Hour} onChange={onToggle24Hour} />
+          </div>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            padding: "10px 12px",
+          }}>
+            <div>
+              <div style={{ fontSize: "13px", fontFamily: "'DM Mono', monospace" }}>로그인 시 자동 시작</div>
+              <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", opacity: 0.45, marginTop: "2px" }}>
+                {autostart.available ? "Mac 부팅 후 메뉴바에 바로 표시" : "앱에서만 설정할 수 있습니다"}
+              </div>
+            </div>
+            <Switch
+              on={autostart.enabled}
+              disabled={!autostart.available || autostart.pending}
+              onChange={autostart.toggle}
+            />
+          </div>
         </div>
 
         {/* Current Cities */}
@@ -136,8 +185,8 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
               padding: "10px 12px",
               borderRadius: "10px",
               marginBottom: "6px",
-              background: idx === baseIndex ? "rgba(108,99,255,0.12)" : "rgba(255,255,255,0.03)",
-              border: idx === baseIndex ? "1px solid rgba(108,99,255,0.3)" : "1px solid transparent",
+              background: idx === baseIndex ? "var(--accent-soft)" : "var(--fill-2)",
+              border: idx === baseIndex ? "1px solid var(--accent-edge)" : "1px solid transparent",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -147,7 +196,7 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
                   {city.name}
                 </div>
                 <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", opacity: 0.5 }}>
-                  {city.label}
+                  {timezoneAbbr(city.timezone, new Date(), city.label)}
                 </div>
               </div>
             </div>
@@ -156,10 +205,10 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
                 <span style={{
                   fontSize: "9px",
                   fontFamily: "'DM Mono', monospace",
-                  color: "#6c63ff",
+                  color: "var(--accent)",
                   padding: "2px 8px",
                   borderRadius: "100px",
-                  background: "rgba(108,99,255,0.15)",
+                  background: "var(--accent-soft)",
                   fontWeight: 600,
                 }}>
                   기준
@@ -169,8 +218,8 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
                   onClick={() => onSetBase(idx)}
                   style={{
                     background: "none",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "rgba(255,255,255,0.5)",
+                    border: "1px solid var(--edge)",
+                    color: "var(--mut)",
                     padding: "3px 8px",
                     borderRadius: "100px",
                     fontFamily: "'DM Mono', monospace",
@@ -185,8 +234,8 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
                 onClick={() => onRemoveCity(city.timezone)}
                 style={{
                   background: "none",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.3)",
+                  border: "1px solid var(--sep)",
+                  color: "var(--dim)",
                   padding: "3px 8px",
                   borderRadius: "100px",
                   fontFamily: "'DM Mono', monospace",
@@ -215,6 +264,7 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
 
         <input
           type="text"
+          className="settings-input"
           placeholder="도시 검색..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -222,9 +272,9 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
             width: "100%",
             padding: "10px 14px",
             borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "rgba(255,255,255,0.04)",
-            color: "#e8e8f0",
+            border: "1px solid var(--edge)",
+            background: "var(--fill-2)",
+            color: "var(--fg)",
             fontFamily: "'DM Mono', monospace",
             fontSize: "12px",
             outline: "none",
@@ -244,12 +294,12 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
               padding: "10px 12px",
               borderRadius: "10px",
               marginBottom: "4px",
-              background: "rgba(255,255,255,0.02)",
+              background: "var(--fill-2)",
               cursor: "pointer",
               transition: "background 0.2s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--fill-2)")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span style={{ fontSize: "18px" }}>{city.flag}</span>
@@ -258,7 +308,7 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
                   {city.name}
                 </div>
                 <div style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", opacity: 0.5 }}>
-                  {city.label}
+                  {timezoneAbbr(city.timezone, new Date(), city.label)}
                 </div>
               </div>
             </div>
@@ -273,7 +323,7 @@ export function Settings({ cities, baseIndex, use24Hour, onToggle24Hour, onAddCi
         <div style={{
           marginTop: "28px",
           paddingTop: "16px",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--sep)",
           textAlign: "center",
           fontFamily: "'DM Mono', monospace",
           fontSize: "10px",

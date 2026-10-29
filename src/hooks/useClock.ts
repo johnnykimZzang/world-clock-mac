@@ -69,13 +69,14 @@ export function useClock() {
   }, []);
 
   const removeCity = useCallback((timezone: string) => {
-    setCities((prev) => {
-      const next = prev.filter((c) => c.timezone !== timezone);
-      return next.length > 0 ? next : prev;
-    });
+    const removedIdx = cities.findIndex((c) => c.timezone === timezone);
+    if (removedIdx < 0 || cities.length <= 1) return;
+    setCities(cities.filter((c) => c.timezone !== timezone));
+    // Keep the same city as base when an earlier one is removed
     setBaseIndex((prev) => {
-      const newCities = cities.filter((c) => c.timezone !== timezone);
-      return prev >= newCities.length ? 0 : prev;
+      if (removedIdx < prev) return prev - 1;
+      if (removedIdx === prev) return 0;
+      return prev;
     });
   }, [cities]);
 

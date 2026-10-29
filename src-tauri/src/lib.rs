@@ -1,14 +1,20 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use chrono_tz::Tz;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder},
-    Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder,
+    window::{Effect, EffectState, EffectsBuilder},
+    Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Rect,
+    WebviewUrl, WebviewWindowBuilder,
 };
+use tauri_plugin_autostart::MacosLauncher;
+
+#[cfg(target_os = "macos")]
+mod macos;
 
 #[derive(Clone)]
 struct TrayConfig {
@@ -57,45 +63,169 @@ fn update_tray_config(
     }
 }
 
-fn show_popover(app: &tauri::AppHandle, click_pos: &PhysicalPosition<f64>) {
-    let win_width = 360.0_f64;
-    let win_height = 780.0_f64;
+#[derive(serde::Serialize)]
+struct SystemLook {
+    accent: Option<String>,
+    material: &'static str,
+}
 
-    // Position window centered horizontally on click, just below menu bar
-    let x = click_pos.x - (win_width / 2.0);
-    let y = click_pos.y + 8.0;
+fn uses_liquid_glass() -> bool {
+    #[cfg(target_os = "macos")]
+    return macos::liquid_glass_available();
+    #[cfg(not(target_os = "macos"))]
+    false
+}
+
+/// Accent color and glass material, mirrored into CSS by the frontend.
+#[tauri::command]
+fn system_look() -> SystemLook {
+    #[cfg(target_os = "macos")]
+    let accent = macos::accent_hex();
+    #[cfg(not(target_os = "macos"))]
+    let accent = None;
+    SystemLook {
+        accent,
+        material: if uses_liquid_glass() { "liquid" } else { "vibrancy" },
+    }
+}
+
+const POPOVER_WIDTH: f64 = 360.0;
+const POPOVER_MAX_HEIGHT: f64 = 780.0;
+const POPOVER_GAP: f64 = 6.0;
+const SCREEN_MARGIN: f64 = 8.0;
+/// Corner radius of the native vibrancy layer; must match `--popover-radius` in global.css.
+const POPOVER_RADIUS: f64 = 16.0;
+
+/// Time the popover was last hidden by losing focus. Clicking the tray icon
+/// while the popover is open first blurs it, so without this the same click
+/// would immediately re-open it.
+struct PopoverState {
+    last_blur_hide: Mutex<Option<Instant>>,
+}
+
+/// Compute the popover frame (logical units) anchored under the tray icon and
+/// clamped inside the monitor that contains it.
+fn popover_frame(app: &tauri::AppHandle, icon_rect: &Rect) -> (LogicalPosition<f64>, LogicalSize<f64>) {
+    let fallback_scale = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|m| m.scale_factor())
+        .unwrap_or(2.0);
+    let icon_pos: PhysicalPosition<f64> = icon_rect.position.to_physical(fallback_scale);
+    let icon_size: PhysicalSize<f64> = icon_rect.size.to_physical(fallback_scale);
+
+    let monitor = app
+        .monitor_from_point(icon_pos.x, icon_pos.y)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+
+    let Some(monitor) = monitor else {
+        let scale = fallback_scale;
+        return (
+            LogicalPosition::new(icon_pos.x / scale - POPOVER_WIDTH / 2.0, (icon_pos.y + icon_size.height) / scale + POPOVER_GAP),
+            LogicalSize::new(POPOVER_WIDTH, POPOVER_MAX_HEIGHT),
+        );
+    };
+
+    let scale = monitor.scale_factor();
+    let mon_x = monitor.position().x as f64 / scale;
+    let mon_y = monitor.position().y as f64 / scale;
+    let mon_w = monitor.size().width as f64 / scale;
+    let mon_h = monitor.size().height as f64 / scale;
+
+    let icon_center_x = (icon_pos.x + icon_size.width / 2.0) / scale;
+    let icon_bottom = (icon_pos.y + icon_size.height) / scale;
+
+    let top = icon_bottom + POPOVER_GAP;
+    let height = POPOVER_MAX_HEIGHT.min(mon_y + mon_h - top - SCREEN_MARGIN).max(320.0);
+    let left = (icon_center_x - POPOVER_WIDTH / 2.0)
+        .max(mon_x + SCREEN_MARGIN)
+        .min(mon_x + mon_w - POPOVER_WIDTH - SCREEN_MARGIN);
+
+    (LogicalPosition::new(left, top), LogicalSize::new(POPOVER_WIDTH, height))
+}
+
+fn toggle_popover(app: &tauri::AppHandle, icon_rect: &Rect) {
+    let (position, size) = popover_frame(app, icon_rect);
 
     if let Some(window) = app.get_webview_window("popover") {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
-        } else {
-            let _ = window.set_position(PhysicalPosition::new(x as i32, y as i32));
-            let _ = window.show();
-            let _ = window.set_focus();
+            return;
         }
-    } else {
-        let window = WebviewWindowBuilder::new(app, "popover", WebviewUrl::default())
-            .title("World Clock")
-            .inner_size(win_width, win_height)
-            .position(x, y)
-            .resizable(false)
-            .decorations(false)
-            .always_on_top(true)
-            .visible(true)
-            .focused(true)
-            .build();
+        let just_blurred = app
+            .state::<PopoverState>()
+            .last_blur_hide
+            .lock()
+            .ok()
+            .and_then(|t| *t)
+            .is_some_and(|t| t.elapsed() < Duration::from_millis(250));
+        if just_blurred {
+            return;
+        }
+        let _ = window.set_size(size);
+        let _ = window.set_position(position);
+        let _ = window.show();
+        let _ = window.set_focus();
+        return;
+    }
 
-        // Auto-hide when popover loses focus
-        if let Ok(win) = window {
-            let app_handle = app.clone();
-            win.on_window_event(move |event| {
-                if let tauri::WindowEvent::Focused(false) = event {
-                    if let Some(w) = app_handle.get_webview_window("popover") {
-                        let _ = w.hide();
-                    }
+    let liquid = uses_liquid_glass();
+    let mut builder = WebviewWindowBuilder::new(app, "popover", WebviewUrl::default())
+        .title("World Clock")
+        .inner_size(size.width, size.height)
+        .position(position.x, position.y)
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(true)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .visible_on_all_workspaces(true)
+        .visible(true)
+        .focused(true);
+    // macOS 26+: Liquid Glass is installed after creation; older systems use vibrancy
+    if !liquid {
+        builder = builder.effects(
+            EffectsBuilder::new()
+                .effect(Effect::Popover)
+                .state(EffectState::Active)
+                .radius(POPOVER_RADIUS)
+                .build(),
+        );
+    }
+    let window = builder.build();
+
+    #[cfg(target_os = "macos")]
+    if liquid {
+        if let Ok(win) = &window {
+            let win = win.clone();
+            let _ = app.run_on_main_thread(move || {
+                if let Ok(ns_window) = win.ns_window() {
+                    // SAFETY: pointer comes from a live window and we are on the main thread
+                    unsafe { macos::install_liquid_glass(ns_window, POPOVER_RADIUS) };
                 }
             });
         }
+    }
+
+    // Auto-hide when popover loses focus
+    if let Ok(win) = window {
+        let app_handle = app.clone();
+        win.on_window_event(move |event| {
+            if let tauri::WindowEvent::Focused(false) = event {
+                if let Some(w) = app_handle.get_webview_window("popover") {
+                    if w.is_visible().unwrap_or(false) {
+                        let _ = w.hide();
+                        if let Ok(mut t) = app_handle.state::<PopoverState>().last_blur_hide.lock() {
+                            *t = Some(Instant::now());
+                        }
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -107,8 +237,14 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .manage(tray_config.clone())
+        .manage(PopoverState { last_blur_hide: Mutex::new(None) })
         .setup(move |app| {
+            // Menu bar only: no Dock icon, no app switcher entry
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             let handle = app.handle().clone();
             let menu_handle = app.handle().clone();
             let config = tray_config.clone();
@@ -133,11 +269,11 @@ pub fn run() {
                     if let tauri::tray::TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
-                        position,
+                        rect,
                         ..
                     } = event
                     {
-                        show_popover(&handle, &position);
+                        toggle_popover(&handle, &rect);
                     }
                 })
                 .build(app)?;
@@ -186,7 +322,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![update_tray_config])
+        .invoke_handler(tauri::generate_handler![update_tray_config, system_look])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
