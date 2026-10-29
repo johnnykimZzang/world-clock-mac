@@ -262,7 +262,7 @@ pub fn run() {
             let tray_menu = Menu::with_items(app, &[&ver_item, &check_item, &sep, &quit_item])?;
 
             let tray = TrayIconBuilder::with_id("main")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))?)
                 .icon_as_template(true)
                 .tooltip("World Clock")
                 .menu(&tray_menu)
