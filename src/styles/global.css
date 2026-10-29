@@ -184,12 +184,13 @@ html.browser-preview #root {
 
 /* ── Popover shell ──────────────────────────────────────── */
 
+/* Height follows the content; useFitWindow sizes the native window to match */
 .popover {
-  height: 100%;
+  max-height: var(--max-h, 100%);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 12px 12px;
+  padding: 12px;
   background: var(--root-tint);
   border: 1px solid var(--sep);
   border-radius: var(--popover-radius);
@@ -198,21 +199,8 @@ html.browser-preview #root {
   position: relative;
 }
 .popover > * { flex-shrink: 0; }
-
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0 4px;
-}
-.title {
-  font-size: 24px;
-  font-weight: 400;
-  font-style: italic;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  margin-top: 4px;
-}
+/* Settings needs room even when only a few cities are listed */
+.popover.settings-open { height: var(--max-h, 100%); }
 
 .icon-btn {
   width: 30px;
@@ -484,7 +472,7 @@ html.browser-preview #root {
 /* ── Tiles ──────────────────────────────────────────────── */
 
 .tiles {
-  flex: 1 1 0;
+  flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
   display: grid;
@@ -512,6 +500,8 @@ html.browser-preview #root {
 .tile:active { transform: scale(0.98); }
 .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tile > :not(span), .hero > :not(span) { position: relative; z-index: 1; }
+.hero > .hero-gear { position: absolute; top: 10px; right: 10px; z-index: 3; width: 26px; height: 26px; }
+.hero .meta { padding-right: 28px; }
 
 .tile-top {
   display: flex;

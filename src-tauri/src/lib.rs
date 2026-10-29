@@ -91,6 +91,7 @@ fn system_look() -> SystemLook {
 
 const POPOVER_WIDTH: f64 = 360.0;
 const POPOVER_MAX_HEIGHT: f64 = 780.0;
+const POPOVER_INITIAL_HEIGHT: f64 = 560.0;
 const POPOVER_GAP: f64 = 6.0;
 const SCREEN_MARGIN: f64 = 8.0;
 /// Corner radius of the native vibrancy layer; must match `--popover-radius` in global.css.
@@ -165,7 +166,7 @@ fn toggle_popover(app: &tauri::AppHandle, icon_rect: &Rect) {
         if just_blurred {
             return;
         }
-        let _ = window.set_size(size);
+        // Height is owned by the frontend (fits the content); only re-anchor it
         let _ = window.set_position(position);
         let _ = window.show();
         let _ = window.set_focus();
@@ -175,7 +176,8 @@ fn toggle_popover(app: &tauri::AppHandle, icon_rect: &Rect) {
     let liquid = uses_liquid_glass();
     let mut builder = WebviewWindowBuilder::new(app, "popover", WebviewUrl::default())
         .title("World Clock")
-        .inner_size(size.width, size.height)
+        // Starting height only; the frontend resizes the window to its content
+        .inner_size(size.width, size.height.min(POPOVER_INITIAL_HEIGHT))
         .position(position.x, position.y)
         .resizable(false)
         .decorations(false)
