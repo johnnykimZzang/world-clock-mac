@@ -29,7 +29,7 @@ export function MoonGlyph({ phase, size }: { phase: number; size: number }) {
 }
 
 /**
- * Blurred light pool plus a crisp sun/moon disc, placed where the real
+ * Soft light pool plus a crisp sun/moon disc, placed where the real
  * sun or moon is in that city's sky.
  */
 export function SkyOrb({ sky, glow, disc }: { sky: Sky; glow: number; disc?: number }) {
@@ -39,7 +39,12 @@ export function SkyOrb({ sky, glow, disc }: { sky: Sky; glow: number; disc?: num
     <>
       <span
         className="orb-glow"
-        style={{ ...pos, width: glow, height: glow, background: color }}
+        style={{
+          ...pos,
+          width: glow * 1.5,
+          height: glow * 1.5,
+          background: `radial-gradient(closest-side, ${color} 0%, ${color} 40%, color-mix(in srgb, ${color} 45%, transparent) 65%, transparent 100%)`,
+        }}
       />
       {disc && <span className="orb-disc" style={pos}>
         {sky.isSun ? (
